@@ -73,7 +73,11 @@ void StringUtil::SplitBy(const std::string& str, const char* delimiters, std::ve
 			std::string ss = str.substr(offset, foundIndex - offset);
 			if (trim)
 			{
-				outValues.push_back(Trim(ss));
+				ss = Trim(ss);
+				if (!ss.empty())
+				{
+					outValues.push_back(ss);
+				}
 			}
 			else
 			{
