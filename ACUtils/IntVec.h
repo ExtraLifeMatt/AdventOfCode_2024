@@ -228,6 +228,7 @@ public:
 	IntVec4();
 	IntVec4(int32_t xyz);
 	IntVec4(int32_t _x, int32_t _y, int32_t _z, int32_t _w);
+	IntVec4(const IntVec2& Low, const IntVec2& High);
 	IntVec4(const __m128i& _vec);
 
 	static const IntVec4 UnitX;

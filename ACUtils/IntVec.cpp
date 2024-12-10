@@ -926,6 +926,11 @@ IntVec4::IntVec4(int32_t _x, int32_t _y, int32_t _z, int32_t _w) : x(_x), y(_y),
 
 }
 
+IntVec4::IntVec4(const IntVec2& Low, const IntVec2& High) : x(Low.x), y(Low.y), z(High.x), w(High.y)
+{
+
+}
+
 bool IntVec4::IsZero() const
 {
 	return x == 0 && y == 0 && z == 0 && w == 0;
