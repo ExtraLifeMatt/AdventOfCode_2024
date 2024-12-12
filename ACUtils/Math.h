@@ -47,6 +47,9 @@ namespace Math
 	constexpr uint32_t FloorLog2_32(uint32_t value) { return 32 - Bits::CountLeadingZeros(value); }
 	constexpr uint32_t FloorLog2_64(uint64_t value) { return 64 - Bits::CountLeadingZeros64(value); }
 
+	uint32_t Log10(uint32_t v);
+	uint32_t Log10(uint64_t v);
+
 	// Pow
 	constexpr uint32_t Pow(const uint32_t base, uint32_t pow)
 	{

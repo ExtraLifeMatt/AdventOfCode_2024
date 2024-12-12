@@ -194,6 +194,39 @@ public:
 		return IntAABB2D(Center - Extents, Center + Extents);
 	}
 
+	IntVec2 GetMinXMinY() const 
+	{
+		return Min;
+	}
+
+	IntVec2 GetMaxXMinY() const
+	{
+		return IntVec2(Max.x, Min.y);
+	}
+
+	IntVec2 GetMinXMaxY() const
+	{
+		return IntVec2(Min.x, Max.y);
+	}
+
+	IntVec2 GetMaxXMaxY() const
+	{
+		return Max;
+	}
+
+	int32_t GetArea() const
+	{
+		const IntVec2& size = GetSize();
+		return size.x * size.y;
+	}
+
+	int32_t GetParameter() const
+	{
+		const IntVec2& size = GetSize();
+		return 2 * (size.x + size.y);
+	}
+
+
 private:
 	IntVec2 Min;
 	IntVec2 Max;

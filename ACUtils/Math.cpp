@@ -48,6 +48,20 @@ int32_t Math::RoundToInt32(float f)
 	return (int32_t)((fabs(f) + 0.5f) * (f < 0.0f ? -1.0f : 1.0f));
 }
 
+uint32_t Math::Log10(uint32_t v)
+{
+	static uint32_t pow10[] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000 };
+	uint32_t tmp = (FloorLog2_32(v) + 1) * 1233 >> 12;
+	return tmp - (v < pow10[tmp]);
+}
+
+uint32_t Math::Log10(uint64_t v)
+{
+	static uint64_t pow10[] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000, 1000000000000 };
+	uint32_t tmp = (FloorLog2_64(v) + 1) * 1233ULL >> 12U;
+	return tmp - (v < pow10[tmp]);
+}
+
 uint64_t Math::LCM(uint64_t a, uint64_t b)
 {
 	return (a / GCD(a, b)) * b;
