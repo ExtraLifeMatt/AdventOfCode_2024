@@ -44,7 +44,7 @@ namespace Hash
 		(void)(i);
 	}
 
-	// Simple version that uses uint64's for our hashes.
+	// Simple version that uses uint64's for our hashes. Be careful with these, collisions are pretty easy.
 	inline uint64_t HashCombineU64(uint64_t seed, uint64_t const& v) {
 		return seed ^ (v + 0x9e3779b9 + (seed << 6) + (seed >> 2));
 	}

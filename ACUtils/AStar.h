@@ -74,7 +74,7 @@
 				if (existingIndex != -1)
 				{
 					AStarNodeBase<uint32_t>* existingNode = m_openList[existingIndex];
-					if (newNode->GetTotalCost() > existingNode->GetCost())
+					if (newNode->GetTotalCost() > existingNode->GetTotalCost())
 					{
 						delete newNode;
 						continue;
