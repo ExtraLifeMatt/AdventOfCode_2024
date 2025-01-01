@@ -62,7 +62,7 @@
 
 				// See if we're in the closed list at a better cost (and we thus this node is a dead end)
 				const AStarNodeBase<uint32_t>* closedNode = GetClosedListNode(newNode);
-				if (closedNode && closedNode->GetTotalCost() < newNode->GetTotalCost())
+				if (closedNode && closedNode->GetTotalCost() <= newNode->GetTotalCost())
 				{
 					// Skip it.
 					delete newNode;
@@ -74,7 +74,7 @@
 				if (existingIndex != -1)
 				{
 					AStarNodeBase<uint32_t>* existingNode = m_openList[existingIndex];
-					if (newNode->GetTotalCost() > existingNode->GetTotalCost())
+					if (newNode->GetTotalCost() >= existingNode->GetTotalCost())
 					{
 						delete newNode;
 						continue;
