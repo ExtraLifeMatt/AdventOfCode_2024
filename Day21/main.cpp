@@ -18,7 +18,6 @@ private:
 			line = fileReader.ReadLine();
 			m_keycodes.push_back(line);
 		}
-
 	}
 
 	std::string GetKeyPresses(char from, char to, int depth) const
@@ -26,7 +25,6 @@ private:
 		static std::string numpad = "789456123#0A";
 		static std::string dirpad = "#^A<v>";
 		static std::string keys[] = { numpad, dirpad };
-		static const int height[] = { 3, 2 };
 		static const int width[] = { 3, 3 };
 		static const int errorIdx[] = { 9, 0 }; // Where our # is.
 
@@ -49,6 +47,7 @@ private:
 		vKeys.insert(vKeys.end(), abs(delta.y), delta.y < 0 ? '^' : 'v');
 		hKeys.insert(hKeys.end(), abs(delta.x), delta.x < 0 ? '<' : '>');
 
+		// Check if we would go over the void.
 		if (toPos.y == errorPos[index].y && fromPos.x == errorPos[index].x)
 		{
 			return hKeys + vKeys;
@@ -58,16 +57,6 @@ private:
 		{
 			return vKeys + hKeys;
 		}
-		// Check if we would go over the void.
-		//if (fromPos.y + delta.y == errorPos[index].y) // vertical, so must go horizontal first.
-		//{
-		//	return hKeys + vKeys;
-		//}
-
-		//if (fromPos.x + delta.x == errorPos[index].x) // horizontal, so must go vertical first.
-		//{
-		//	return vKeys + hKeys;
-		//}
 
 		// If we're going left, go horizontal first.
 		if (delta.x < 0)
@@ -100,6 +89,41 @@ private:
 		return totalLength * complexity;
 	}
 
+	bool VerifyPath(char from, int depth, const std::string& sequence) const
+	{
+		static std::string numpad = "789456123#0A";
+		static std::string dirpad = "#^A<v>";
+		static std::string keys[] = { numpad, dirpad };
+		static const int height[] = { 3, 2 };
+		static const int width[] = { 3, 3 };
+		static const int errorIdx[] = { 9, 0 }; // Where our # is.
+
+		static IntVec2 errorPos[] = { { 0, 3 }, { 0, 0} };
+		assert(keys[0][errorIdx[0]] == '#' && keys[1][errorIdx[1]] == '#');
+
+		int index = std::min(depth, 1); // 0 is the numpad, everything else is dirpad.
+
+		int fromIdx = (int32_t)keys[index].find(from);
+
+		IntVec2 fromPos(fromIdx % width[index], fromIdx / width[index]);
+
+		for (size_t sIdx = 0; sIdx < sequence.length(); ++sIdx)
+		{
+			switch (sequence[sIdx])
+			{
+				case '<': fromPos += IntVec2(-1, 0); break;
+				case '>': fromPos += IntVec2(1, 0); break;
+				case '^': fromPos += IntVec2(0, -1); break;
+				case 'v': fromPos += IntVec2(0, 1); break;
+				default: break;
+			}
+
+			assert(fromPos != errorPos[index]);
+		}
+
+		return true;
+	}
+
 	size_t Solve_R(char from, char to, int depth, int maxDepth, std::unordered_map<size_t, std::pair<size_t, std::string>>& cache, std::vector<std::string>& debugStr ) const
 	{
 		size_t cacheEntryId = (size_t)from | (size_t)to << 8 | (size_t)depth << 16;
@@ -107,19 +131,19 @@ private:
 		std::unordered_map<size_t, std::pair<size_t, std::string>>::const_iterator itFind = cache.find(cacheEntryId);
 		if (itFind != cache.end())
 		{
-			Log("Cached Result [%zd] [%d] [%c] -> [%c] = [%zd] (%s)", cacheEntryId, depth, from, to, itFind->second.first, itFind->second.second.c_str());
-			debugStr[depth].append(itFind->second.second);
-			Log("Depth [%d] is now [%s]", depth, debugStr[depth].c_str());
 			return itFind->second.first;
 		}
 
 		std::string presses = GetKeyPresses(from, to, depth) + "A";
-		Log("[%d] %c -> %c : %s", depth, from, to, presses.c_str());
-
-		debugStr[depth].append(presses.c_str());
-		Log("Depth [%d] is now [%s]", depth, debugStr[depth].c_str());
 
 		size_t currentLength = presses.size();
+
+		if (depth == maxDepth)
+		{
+			return currentLength;
+		}
+
+		currentLength = 0;
 
 		// Chain up to the robot behind us.
 		if (depth < maxDepth)
@@ -147,6 +171,9 @@ private:
 		{
 			sum += Solve(keycode, 3, cache, debug);
 		}
+
+		Log("Sum %zd", sum);
+
 		// Done.
 		AdventGUIInstance::PartOne(context);
 	}
@@ -154,7 +181,15 @@ private:
 	virtual void PartTwo(const AdventGUIContext& context) override
 	{
 		// Part Two
+		size_t sum = 0;
+		std::unordered_map<size_t, std::pair<size_t, std::string>> cache;
+		std::vector<std::string> debug;
+		for (const std::string& keycode : m_keycodes)
+		{
+			sum += Solve(keycode, 26, cache, debug);
+		}
 
+		Log("Sum %zd", sum);
 		// Done.
 		AdventGUIInstance::PartTwo(context);
 	}
@@ -168,7 +203,7 @@ int main()
 	newParams.day = 21;
 	newParams.year = 2024;
 	newParams.puzzleTitle = "Keypad Conundrum";
-	newParams.inputFilename = "sample.txt";
+	newParams.inputFilename = "input.txt";
 
 	AdventGUIInstance::InstantiateAndExecute<AdventDay>(newParams);
 
