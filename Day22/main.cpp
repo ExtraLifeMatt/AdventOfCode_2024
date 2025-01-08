@@ -2,11 +2,13 @@
 #include "ACUtils/Algorithm.h"
 #include "ACUtils/IntVec.h"
 
+#include <unordered_map>
+#include <unordered_set>
 
 class AdventDay : public AdventGUIInstance
 {
 public:
-	AdventDay(const AdventGUIParams& params) : AdventGUIInstance(params) {};
+	AdventDay(const AdventGUIParams& params) : AdventGUIInstance(params) { m_mostBananas = 0; };
 
 private:
 	virtual void ParseInput(FileStreamReader& fileReader) override
@@ -16,10 +18,12 @@ private:
 		while (!fileReader.IsEOF())
 		{
 			line = fileReader.ReadLine();
-			m_MemNumbers.push_back(StringUtil::AtoiU64(line.c_str()));
+			m_MemNumbers.push_back((uint32_t)atoi(line.c_str()));
+			m_buyers.emplace_back();
+			InitializeBuyer(m_MemNumbers.back(), m_buyers.back());
 		}
 
-		uint64_t expectedValues[] = { 15887950,
+		uint32_t expectedValues[] = { 15887950,
 										16495136,
 										527345,
 										704524,
@@ -29,7 +33,7 @@ private:
 										12249484,
 										7753432,
 										5908254 };
-		uint64_t testValue = 123;
+		uint32_t testValue = 123;
 		for (int i = 0; i < ARRAY_SIZE(expectedValues); ++i)
 		{
 			testValue = MutateN(testValue, 1);
@@ -37,39 +41,100 @@ private:
 		}
 	}
 
-	uint64_t MixSlow(uint64_t a, uint64_t b) const
+	struct alignas(16) Buyer
 	{
-		return a ^ b;
+		uint32_t seeds[2000];
+		int8_t deltas[2000];
+		uint32_t values[2000];
+	};
+
+	uint32_t EncodeSequenceAndValue(int8_t a, int8_t b, int8_t c, int8_t d) const
+	{
+		constexpr uint32_t channel_mask = (1 << 4) - 1;
+		constexpr uint32_t channel_two_comp_bit = 1 << 4;
+
+		uint32_t out = 0;
+		out |= ((a & channel_mask) | (a < 0 ? channel_two_comp_bit : 0));
+		out |= ((b & channel_mask) | (b < 0 ? channel_two_comp_bit : 0)) << 5;
+		out |= ((c & channel_mask) | (c < 0 ? channel_two_comp_bit : 0)) << 10;
+		out |= ((d & channel_mask) | (d < 0 ? channel_two_comp_bit : 0)) << 15;
+
+		return out;
 	}
 
-	uint64_t PruneSlow(uint64_t a) const
+	bool SequenceCompare(uint32_t a, uint32_t b) const
 	{
-		return a % 16777216;
+		constexpr uint32_t sequence_only_mask = (1 << 20) - 1;
+		return (a & sequence_only_mask) == (b & sequence_only_mask);
 	}
 
-	uint64_t MutateSlow(uint64_t a) const
+	uint16_t GetSequenceValue(uint32_t a) const
 	{
-		uint64_t a0 = a;
-		a0 = PruneSlow(MixSlow(a0, a0 * 64));
-		a0 = PruneSlow(MixSlow(a0, a0 / 32));
-		a0 = PruneSlow(MixSlow(a0, a0 * 2048));
+		return a >> 20;
+	}
 
+	uint32_t GetLastDigit(uint32_t v)
+	{
+		return v % 10;
+	}
+
+	typedef std::unordered_map<uint32_t, uint32_t> SequenceToTotalMap;
+	
+	void InitializeBuyer(uint32_t seed, Buyer& outBuyer)
+	{
+		uint32_t lastValue = seed;
+		uint32_t currentValue = seed;
+		outBuyer.seeds[0] = seed;
+		outBuyer.deltas[0] = 0;
+		outBuyer.values[0] = GetLastDigit(seed);
+
+		std::unordered_set<uint32_t> addedSequences;
+		for (int i = 1; i < 2000; ++i)
+		{
+			currentValue = Mutate(lastValue);
+			outBuyer.seeds[i] = currentValue;
+			outBuyer.values[i] = GetLastDigit(currentValue);
+			outBuyer.deltas[i] = outBuyer.values[i - 1] - outBuyer.values[i];
+
+			lastValue = currentValue;
+
+			if (i >= 3)
+			{
+				uint32_t sequence = EncodeSequenceAndValue(outBuyer.deltas[i - 3], outBuyer.deltas[i - 2], outBuyer.deltas[i - 1], outBuyer.deltas[i]);
+				if (addedSequences.find(sequence) == addedSequences.end())
+				{
+					SequenceToTotalMap::iterator itFind = m_sequenceToTotal.find(sequence);
+					if (itFind == m_sequenceToTotal.end())
+					{
+						itFind = m_sequenceToTotal.insert(std::make_pair(sequence, 0)).first;
+					}
+					assert(itFind != m_sequenceToTotal.end());
+					itFind->second += outBuyer.values[i];
+
+					if (itFind->second > m_mostBananas)
+					{
+						m_mostBananas = itFind->second;
+					}
+
+					addedSequences.insert(sequence);
+				}
+			}
+		}
+	}
+
+	uint32_t Mutate(uint32_t a) const
+	{
+		constexpr uint32_t modMask = (1 << 24) - 1; // % 16777216UL
+		uint32_t a0 = a;
+		a0 = (a0 ^ (a0 << 6)) & modMask;
+		a0 = (a0 ^ (a0 >> 5)) & modMask;
+		a0 = (a0 ^ (a0 << 11)) & modMask;
 		return a0;
 	}
 
-	uint64_t Mutate(uint64_t a) const
+	uint32_t MutateN(uint32_t a, int32_t numSteps) const
 	{
-		constexpr uint64_t modMask = (1UL << 24UL) - 1; // % 16777216UL
-		uint64_t a0 = a;
-		a0 = (a0 ^ (a0 << 6UL)) & modMask;
-		a0 = (a0 ^ (a0 >> 5UL)) & modMask;
-		a0 = (a0 ^ (a0 << 11UL)) & modMask;
-		return a0;
-	}
-
-	uint64_t MutateN(uint64_t a, int32_t numSteps) const
-	{
-		uint64_t out = a;
+		uint32_t out = a;
 
 		for (int32_t i = 0; i < numSteps; ++i)
 		{
@@ -82,11 +147,11 @@ private:
 	virtual void PartOne(const AdventGUIContext& context) override
 	{
 		// Part One
-		std::vector<uint64_t> mutatedSeeds;
+		std::vector<uint32_t> mutatedSeeds;
 		mutatedSeeds.reserve(m_MemNumbers.size());
 
 		uint64_t sum = 0;
-		for (uint64_t seed : m_MemNumbers)
+		for (uint32_t seed : m_MemNumbers)
 		{
 			mutatedSeeds.push_back(MutateN(seed, 2000));
 			sum += mutatedSeeds.back();
@@ -101,12 +166,16 @@ private:
 	virtual void PartTwo(const AdventGUIContext& context) override
 	{
 		// Part Two
-
+		Log("Most Bananas: %u", m_mostBananas);
 
 		// Done.
 		AdventGUIInstance::PartTwo(context);
 	}
-	std::vector<uint64_t> m_MemNumbers;
+	std::vector<uint32_t> m_MemNumbers;
+	std::vector<Buyer> m_buyers;
+
+	SequenceToTotalMap m_sequenceToTotal;
+	uint32_t m_mostBananas;
 };
 
 int main()
